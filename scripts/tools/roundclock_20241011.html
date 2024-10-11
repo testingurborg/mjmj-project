@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>カウントダウンタイマー</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: black;
+            color: white;
+            text-align: center;
+        }
+        #timer {
+            font-size: 30vw;
+            font-weight: bold;
+            margin-bottom: 2vh;
+        }
+        #title {
+            font-size: 8vw;
+			font-weight: bold;
+            margin-bottom: 2vh;
+        }
+        input {
+            font-size: 2vw;
+            padding: 1vw;
+            text-align: center;
+            margin-right: 1vw;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 2vh;
+        }
+        button {
+            font-size: 2vw;
+            margin: 1vw;
+            padding: 1vw 2vw;
+            background-color: white;
+            color: black;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: gray;
+        }
+        #timeDisplayContainer {
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+         #timeDisplay {
+            font-size: 1.2em;
+        }
+    </style>
+</head>
+<body>
+    
+    <div id="timer">50:00</div>
+	<div id="title">タイマー</div>
+    <div class="controls">
+        <input id="title-input" type="text" placeholder="タイマーの名前を入力">
+        <button id="start">Start</button>
+        <button id="stop">Stop</button>
+        <button id="reset">Reset</button>
+    <div id="timeDisplayContainer">
+        <div id="timeDisplay"></div>
+    </div>
+    </div>
+		
+    <script>
+        let timer;
+        const totalTime = 50 * 60; // 50 minutes in seconds
+        let currentTime = totalTime;
+        let countingUp = false;
+
+        const timerElement = document.getElementById('timer');
+        const titleElement = document.getElementById('title');
+        const titleInputElement = document.getElementById('title-input');
+        const startButton = document.getElementById('start');
+        const stopButton = document.getElementById('stop');
+        const resetButton = document.getElementById('reset');
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(Math.abs(currentTime) / 60);
+            const seconds = Math.abs(currentTime) % 60;
+            timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+            if (countingUp) {
+                timerElement.style.color = 'red';
+            } else {
+                timerElement.style.color = 'yellow';
+            }
+        }
+
+        function updateTitle() {
+            titleElement.textContent = titleInputElement.value || 'タイマー';
+        }
+
+        function startTimer() {
+            if (!timer) {
+                timer = setInterval(() => {
+                    if (currentTime > 0) {
+							if (countingUp == false){
+							currentTime--;
+						} else {
+							currentTime++;
+						}
+                    } else {
+                        countingUp = true;
+                        currentTime++;
+                    }
+                    updateTimerDisplay();
+                }, 1000);
+            }
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('ja-JP', { hour12: false });
+            const seconds = now.getSeconds();
+            const timeDisplay = document.getElementById('timeDisplay');
+            timeDisplay.innerHTML = `<p>round started at ${timeString}</p>`;
+            // scroll, if any.
+            const container = document.getElementById('timeDisplayContainer');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function stopTimer() {
+            if (timer) {
+                clearInterval(timer);
+                timer = null;
+            }
+        }
+
+        function resetTimer() {
+            stopTimer();
+            currentTime = totalTime;
+            countingUp = false;
+            updateTimerDisplay();
+        }
+
+        titleInputElement.addEventListener('input', updateTitle);
+        startButton.addEventListener('click', startTimer);
+        stopButton.addEventListener('click', stopTimer);
+        resetButton.addEventListener('click', resetTimer);
+
+        // Initialize timer display
+        updateTimerDisplay();
+    </script>
+</body>
+</html>
