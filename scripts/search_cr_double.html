@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>テキストファイル二段階検索</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        #searchForm, #secondSearchForm {
+            margin-bottom: 20px;
+        }
+        .searchInput {
+            width: 70%;
+            padding: 5px;
+        }
+        .searchButton {
+            padding: 5px 10px;
+        }
+        #results {
+            border: 1px solid #ccc;
+            padding: 10px;
+            min-height: 100px;
+        }
+        .highlight {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>テキストファイル二段階検索</h1>
+    <form id="searchForm">
+        <input type="text" id="searchInput" class="searchInput" placeholder="検索文字列を入力">
+        <button type="submit" id="searchButton" class="searchButton">検索</button>
+    </form>
+    <form id="secondSearchForm">
+        <input type="text" id="secondSearchInput" class="searchInput" placeholder="再検索文字列を入力" disabled>
+        <button type="submit" id="secondSearchButton" class="searchButton" disabled>再検索</button>
+    </form>
+    <div id="results">ファイルを読み込んでいます...</div>
+
+    <script>
+        const searchForm = document.getElementById('searchForm');
+        const searchInput = document.getElementById('searchInput');
+        const searchButton = document.getElementById('searchButton');
+        const secondSearchForm = document.getElementById('secondSearchForm');
+        const secondSearchInput = document.getElementById('secondSearchInput');
+        const secondSearchButton = document.getElementById('secondSearchButton');
+        const results = document.getElementById('results');
+        let fileContent = '';
+        let firstSearchResults = [];
+
+        // ページ読み込み時にtxtを読み込む
+        window.addEventListener('load', function() {
+            fetch('JPN_CR_current.txt')
+                .then(response => response.text())
+                .then(text => {
+                    fileContent = text;
+                    results.innerHTML = 'ファイルが読み込まれました。検索できます。';
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    results.innerHTML = 'ファイルの読み込み中にエラーが発生しました。';
+                });
+        });
+
+        searchForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const searchTerm = searchInput.value.trim();
+            if (searchTerm === '') return;
+
+            const lines = fileContent.split('\n');
+            firstSearchResults = lines.filter(line => line.includes(searchTerm));
+            displayResults(firstSearchResults);
+
+            secondSearchInput.disabled = false;
+            secondSearchButton.disabled = false;
+        });
+
+        secondSearchForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const searchTerm = secondSearchInput.value.trim();
+            if (searchTerm === '') return;
+
+            const matchedLines = firstSearchResults.filter(line => line.includes(searchTerm));
+            displayResults(matchedLines, searchTerm);
+        });
+
+        function displayResults(matchedLines, highlightTerm = '') {
+            if (matchedLines.length === 0) {
+                results.innerHTML = '該当する行が見つかりませんでした。';
+            } else {
+                const resultHtml = matchedLines.map(line => {
+                    let escapedLine = escapeHtml(line);
+                    if (highlightTerm) {
+                        const escapedTerm = escapeRegExp(escapeHtml(highlightTerm));
+                        escapedLine = escapedLine.replace(new RegExp(escapedTerm, 'g'), 
+                                            match => `<span class="highlight">${match}</span>`);
+                    }
+                    return `<p>${escapedLine}</p>`;
+                }).join('');
+                results.innerHTML = resultHtml;
+            }
+        }
+
+        function escapeHtml(unsafe) {
+            return unsafe
+                 .replace(/&/g, "&amp;")
+                 .replace(/</g, "&lt;")
+                 .replace(/>/g, "&gt;")
+                 .replace(/"/g, "&quot;")
+                 .replace(/'/g, "&#039;");
+        }
+
+        function escapeRegExp(string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+    </script>
+</body>
+</html>
