@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>テキストファイル二段階検索</title>
+    <title>CR検索(beta) v0.2 </title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -33,7 +33,7 @@
     </style>
 </head>
 <body>
-    <h1>テキストファイル二段階検索</h1>
+    <h1>CR検索(beta) v0.2</h1>
     <form id="searchForm">
         <input type="text" id="searchInput" class="searchInput" placeholder="検索文字列を入力">
         <button type="submit" id="searchButton" class="searchButton">検索</button>
@@ -121,5 +121,10 @@
             return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         }
     </script>
+        
+<hr>
+        <p>Changes:<br>
+            v0.2 二段階検索に対応しました。検索文字列でヒットした結果から更に再検索して色付けします。phpの使用をやめました。(2024/10/17)<br>
+            <a href="search_cr.html">v0.1</a> Initial version. (2024/5/24)</p>
 </body>
 </html>
