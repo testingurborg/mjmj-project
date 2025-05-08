@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Swiss Triangle</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .inputs {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 10px;
+        }
+        label {
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 100px;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .triangle-container {
+            margin-top: 30px;
+            overflow-x: auto;
+        }
+        table {
+            border-collapse: collapse;
+            margin: 0 auto;
+        }
+        td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+            min-width: 60px;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        .explanation {
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            border-left: 5px solid #4CAF50;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Swiss Triangle</h1>
+
+        <div class="inputs">
+            <div class="input-group">
+                <label for="participants">参加人数（不戦勝含まず）</label>
+                <input type="number" id="participants" min="1" value="100">
+            </div>
+            <div class="input-group">
+                <label for="rounds">回戦数</label>
+                <input type="number" id="rounds" min="1" value="5">
+            </div>
+            <div class="input-group">
+                <label for="bye1">不戦勝1</label>
+                <input type="number" id="bye1" min="0" value="0">
+            </div>
+            <div class="input-group">
+                <label for="bye2">不戦勝2</label>
+                <input type="number" id="bye2" min="0" value="0">
+            </div>
+            <div class="input-group">
+                <label for="bye3">不戦勝3</label>
+                <input type="number" id="bye3" min="0" value="0">
+            </div>
+            <button onclick="generateTriangle()">計算する</button>
+        </div>
+
+        <div id="triangle" class="triangle-container"></div>
+
+        <div class="explanation">
+            <h3>使用方法</h3>
+            <p>参加人数と回戦数を入力し、「計算する」ボタンをクリックすると、スイストーナメントのトライアングルが表示されます。</p>
+            <p>「不戦勝1」「不戦勝2」「不戦勝3」には、それぞれの不戦勝を持つ参加者の人数を入力してください。</p>
+            <p>各セルの数値は、その回戦終了時点でその敗北数を持つ選手の理論上の人数です。</p>
+            <p>例えば、Round 2の「0敗」の列には、2回戦終了時点で無敗の選手の合計人数が表示されます（通常の勝利と不戦勝を含む）。</p>
+        </div>
+    </div>
+
+    <script>
+function generateTriangle() {
+            const participants = parseInt(document.getElementById('participants').value);
+            const rounds = parseInt(document.getElementById('rounds').value);
+            const bye1 = parseInt(document.getElementById('bye1').value) || 0;
+            const bye2 = parseInt(document.getElementById('bye2').value) || 0;
+            const bye3 = parseInt(document.getElementById('bye3').value) || 0;
+
+            if (isNaN(participants) || participants < 1 || isNaN(rounds) || rounds < 1) {
+                alert('参加人数と回戦数は1以上の整数を入力してください。');
+                return;
+            }
+
+            if (bye1 + bye2 + bye3 > participants) {
+                alert('不戦勝の合計が参加人数を超えています。');
+                return;
+            }
+
+            // トライアングルの配列を生成（各ラウンドの敗北者数を格納）
+            let triangle = [];
+            triangle[0] = [participants, 0, 0, 0]; // 初期状態は参加人数が0敗
+
+            // 各ラウンドを計算
+            for (let r = 1; r <= rounds; r++) {
+                triangle[r] = [];
+                const prevRound = triangle[r - 1];
+                let currentRound = [];
+
+                // 各敗北数の人数を計算
+                for (let losses = 0; losses <= r; losses++) {
+                    currentRound[losses] = 0;
+                }
+
+                for (let losses = 0; losses < prevRound.length; losses++) {
+                    const numPlayers = prevRound[losses] || 0;
+                    const pairings = Math.floor(numPlayers / 2);
+                    const remainder = numPlayers % 2;
+
+                    // 勝者（同じ敗北数）
+                    currentRound[losses] = (currentRound[losses] || 0) + pairings + remainder; // 切り上げ
+                    // 敗者（敗北数が1増える）
+                    currentRound[losses + 1] = (currentRound[losses + 1] || 0) + pairings;
+                }
+
+                // 不戦勝の処理：該当するラウンドで0敗として加算
+                if (r === 1) {
+                    currentRound[0] = (currentRound[0] || 0) + bye1;
+                } else if (r === 2) {
+                    currentRound[0] = (currentRound[0] || 0) + bye2;
+                } else if (r === 3) {
+                    currentRound[0] = (currentRound[0] || 0) + bye3;
+                }
+
+                triangle[r] = currentRound;
+            }
+
+            // HTMLテーブルを生成
+            let tableHtml = '<table>';
+
+            // ヘッダー行
+            tableHtml += '<tr><td>Round</td>';
+            for (let i = 0; i <= rounds; i++) {
+                tableHtml += `<td>${i}敗</td>`;
+            }
+            tableHtml += '</tr>';
+
+            // データ行
+            for (let r = 0; r <= rounds; r++) {
+                tableHtml += `<tr><td>Round ${r}</td>`;
+                for (let losses = 0; losses <= rounds; losses++) {
+                    tableHtml += `<td>${triangle[r][losses] || 0}</td>`;
+                }
+                tableHtml += '</tr>';
+            }
+
+            tableHtml += '</table>';
+
+            document.getElementById('triangle').innerHTML = tableHtml;
+        }
+    </script>
+</body>
+</html>
