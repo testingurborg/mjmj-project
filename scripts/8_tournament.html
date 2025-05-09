@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>8人トーナメント表</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .tournament-bracket {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1rem;
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        .round {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            margin: 0;
+            min-width: 25%;
+        }
+
+        .round-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #4f46e5;
+            text-align: center;
+            width: 100%;
+        }
+
+        .match {
+            background-color: #f9fafb;
+            border: 1px solid #d1d5db;
+            border-radius: 0.25rem;
+            padding: 0.5rem;
+            margin-bottom: 0.5rem;
+            width: 100%;
+            box-sizing: border-box;
+            text-align: center;
+            min-height: 2.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+        }
+
+        .match p {
+            margin: 0;
+            font-size: 0.8rem;
+            color: #374151;
+            overflow-wrap: break-word;
+        }
+
+        .final-match {
+            background-color: #f0fdf4;
+            border-color: #16a34a;
+        }
+
+        .winner {
+            font-weight: 600;
+            color: #15803d;
+        }
+
+        /* 接続線を削除 */
+        .match::before {
+            content: none;
+        }
+
+        /* A4用紙サイズとマージン */
+        @media print {
+            body {
+                width: 210mm;
+                height: 297mm;
+                margin: 0;
+                padding: 0;
+            }
+
+            .container {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+
+            .tournament-bracket {
+                margin-top: 0;
+            }
+
+            .round {
+                margin: 0 0.2rem;
+                padding-bottom: 0.5rem;
+                min-width: 25%;
+            }
+
+            .round-title {
+                font-size: 0.8rem;
+                margin-bottom: 0.2rem;
+            }
+
+            .match {
+                padding: 0.2rem;
+                margin-bottom: 0.2rem;
+                min-height: 2rem;
+                font-size: 0.7rem;
+            }
+
+            .match p {
+                font-size: 0.7rem;
+            }
+        }
+
+        /* ドラフトテーブルのスタイル */
+        .draft-table {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 2rem;
+            width: 100%;
+        }
+
+        .draft-table-title{
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #4f46e5;
+            text-align: center;
+            width: 100%;
+        }
+
+        .draft-table-row {
+            display: flex;
+            justify-content: center;
+            margin: 0.5rem 0;
+            width: 100%;
+        }
+
+
+        .draft-table-row p {
+            background-color: #e5e7eb;
+            border: 1px solid #d1d5db;
+            border-radius: 0.25rem;
+            padding: 0.5rem;
+            margin: 0 1rem;
+            width: 100%;
+            max-width: 150px;
+            box-sizing: border-box;
+            text-align: center;
+            min-height: 2.5rem;
+            font-size: 0.8rem;
+            color: #374151;
+            overflow-wrap: break-word;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-4">
+    <div class="container mx-auto bg-white shadow-md rounded-lg p-4">
+        <h1 class="text-xl font-semibold text-indigo-600 text-center mb-3">8人トーナメント表</h1>
+
+        <div id="player-inputs" class="mb-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
+                <div class="mb-1">
+                    <label for="player1" class="block text-gray-700 text-sm font-bold mb-1">プレイヤー1:</label>
+                    <input type="text" id="player1" class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="プレイヤー1">
+                </div>
+                <div class="mb-1">
+                    <label for="player2" class="block text-gray-700 text-sm font-bold mb-1">プレイヤー2:</label>
+                    <input type="text" id="player2" class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="プレイヤー2">
+                </div>
+                <div class="mb-1">
+                    <label for="player3" class="block text-gray-700 text-sm font-bold mb-1">プレイヤー3:</label>
+                    <input type="text" id="player3" class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="プレイヤー3">
+                </div>
+                <div class="mb-1">
+                    <label for="player4" class="block text-gray-700 text-sm font-bold mb-1">プレイヤー4:</label>
+                    <input type="text" id="player4" class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="プレイヤー4">
+                </div>
+                <div class="mb-1">
+                    <label for="player5" class="block text-gray-700 text-sm font-bold mb-1">プレイヤー5:</label>
+                    <input type="text" id="player5" class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="プレイヤー5">
+                </div>
+                <div class="mb-1">
+                    <label for="player6" class="block text-gray-700 text-sm font-bold mb-1">プレイヤー6:</label>
+                    <input type="text" id="player6" class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="プレイヤー6">
+                </div>
+                <div class="mb-1">
+                    <label for="player7" class="block text-gray-700 text-sm font-bold mb-1">プレイヤー7:</label>
+                    <input type="text" id="player7" class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="プレイヤー7">
+                </div>
+                <div class="mb-1">
+                    <label for="player8" class="block text-gray-700 text-sm font-bold mb-1">プレイヤー8:</label>
+                    <input type="text" id="player8" class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="プレイヤー8">
+                </div>
+            </div>
+        </div>
+
+        <div class="flex justify-center mb-4">
+            <button id="generate-tournament" class="bg-indigo-500 hover:bg-indigo-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline text-sm">トーナメント表を生成する</button>
+        </div>
+
+        <div id="draft-table" class="draft-table">
+            <h2 class="draft-table-title">ドラフト席順</h2>
+        </div>
+
+        <div id="tournament-bracket" class="tournament-bracket">
+            </div>
+    </div>
+
+    <script>
+        function shuffleArray(array) {
+            let currentIndex = array.length, randomIndex;
+            while (currentIndex != 0) {
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+                [array[currentIndex], array[randomIndex]] = [
+                    array[randomIndex], array[currentIndex]];
+            }
+            return array;
+        }
+
+        function generateTournament() {
+            const playerInputs = [
+                document.getElementById('player1').value.trim(),
+                document.getElementById('player2').value.trim(),
+                document.getElementById('player3').value.trim(),
+                document.getElementById('player4').value.trim(),
+                document.getElementById('player5').value.trim(),
+                document.getElementById('player6').value.trim(),
+                document.getElementById('player7').value.trim(),
+                document.getElementById('player8').value.trim()
+            ];
+
+            // 空の名前がないかチェック
+            if (playerInputs.some(name => name === "")) {
+                alert("すべてのプレイヤー名を入力してください。");
+                return;
+            }
+
+            const shuffledPlayers = shuffleArray(playerInputs);
+
+            const round1Matches = [
+                { player1: shuffledPlayers[0], player2: shuffledPlayers[1] },
+                { player1: shuffledPlayers[2], player2: shuffledPlayers[3] },
+                { player1: shuffledPlayers[4], player2: shuffledPlayers[5] },
+                { player1: shuffledPlayers[6], player2: shuffledPlayers[7] }
+            ];
+
+            const round2Matches = [
+                { player1: "　　", player2: "　　" },
+                { player1: "　　", player2: "　　" }
+            ];
+
+            const finalMatch = { player1: "　　", player2: "　　" };
+
+            // ドラフトテーブルの生成
+            const draftTableDiv = document.getElementById('draft-table');
+            draftTableDiv.innerHTML = '<h2 class="draft-table-title">ドラフト席順</h2>'; // Clear previous content and add title
+
+            const row1Div = document.createElement('div');
+            row1Div.className = 'draft-table-row';
+            row1Div.innerHTML += `<p>${shuffledPlayers[0]}</p>`;
+            row1Div.innerHTML += `<p>${shuffledPlayers[4]}</p>`;
+            row1Div.innerHTML += `<p>${shuffledPlayers[2]}</p>`;
+            row1Div.innerHTML += `<p>${shuffledPlayers[6]}</p>`;
+            draftTableDiv.appendChild(row1Div);
+
+            const row2Div = document.createElement('div');
+            row2Div.className = 'draft-table-row';
+            row2Div.innerHTML += `<p>${shuffledPlayers[7]}</p>`;
+            row2Div.innerHTML += `<p>${shuffledPlayers[3]}</p>`;
+            row2Div.innerHTML += `<p>${shuffledPlayers[5]}</p>`;
+            row2Div.innerHTML += `<p>${shuffledPlayers[1]}</p>`;
+            draftTableDiv.appendChild(row2Div);
+
+
+            const tournamentBracket = document.getElementById('tournament-bracket');
+            tournamentBracket.innerHTML = '';
+
+            const round1Div = document.createElement('div');
+            round1Div.className = 'round';
+            round1Div.innerHTML = `<h2 class="round-title">1回戦</h2>`;
+            round1Matches.forEach(match => {
+                const matchDiv = document.createElement('div');
+                matchDiv.className = 'match';
+                matchDiv.innerHTML = `<p>${match.player1}</p><p>vs</p><p>${match.player2}</p>`;
+                round1Div.appendChild(matchDiv);
+            });
+            tournamentBracket.appendChild(round1Div);
+
+            const round2Div = document.createElement('div');
+            round2Div.className = 'round';
+            round2Div.innerHTML = `<h2 class="round-title">2回戦</h2>`;
+            round2Matches.forEach(match => {
+                const matchDiv = document.createElement('div');
+                matchDiv.className = 'match';
+                matchDiv.innerHTML = `<p>${match.player1}</p><p>vs</p><p>${match.player2}</p>`;
+                round2Div.appendChild(matchDiv);
+            });
+            tournamentBracket.appendChild(round2Div);
+
+            const finalDiv = document.createElement('div');
+            finalDiv.className = 'round';
+            finalDiv.innerHTML = `<h2 class="round-title">決勝</h2>`;
+            const finalMatchDiv = document.createElement('div');
+            finalMatchDiv.className = 'match final-match';
+            finalMatchDiv.innerHTML = `<p>${finalMatch.player1}</p><p>vs</p><p>${finalMatch.player2}</p>`;
+            finalDiv.appendChild(finalMatchDiv);
+            tournamentBracket.appendChild(finalDiv);
+        }
+
+        document.getElementById('generate-tournament').addEventListener('click', generateTournament);
+    </script>
+</body>
+</html>
