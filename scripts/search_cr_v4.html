@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CR検索(beta) v0.4 </title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .search-section { /* 各検索フォームセクションのスタイル */
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+        .search-section h2 {
+            margin-top: 0;
+            color: #333;
+        }
+        .search-form { /* フォーム共通のスタイル */
+            margin-bottom: 15px;
+        }
+        .search-input { /* 入力フィールド共通のスタイル */
+            width: 70%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box; /* パディングを含めて幅を計算 */
+            margin-right: 5px;
+        }
+        .search-button { /* ボタン共通のスタイル */
+            padding: 8px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        .search-button:hover {
+            background-color: #0056b3;
+        }
+        .search-button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .reset-button { /* リセットボタンのスタイル */
+            padding: 8px 15px;
+            background-color: #dc3545; /* 赤色系の色 */
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            margin-left: 5px; /* 検索ボタンとの間隔 */
+        }
+        .reset-button:hover {
+            background-color: #c82333;
+        }
+        .results-display { /* 結果表示エリア共通のスタイル */
+            border: 1px solid #ccc;
+            padding: 10px;
+            min-height: 100px;
+            background-color: white;
+            border-radius: 4px;
+            overflow-y: auto; /* 結果が多い場合にスクロール */
+        }
+        /* 1番目の検索結果のハイライト色 */
+        .highlight-first {
+            color: red;
+            font-weight: bold;
+        }
+        /* 2番目の検索結果のハイライト色 */
+        .highlight-second {
+            color: blue;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>CR検索(beta) v0.4</h1>
+
+    <div class="search-section">
+        <h2>CR(日本語) 検索</h2>
+        <form id="searchFormJp" class="search-form">
+            <input type="text" id="searchInputJp" class="search-input" placeholder="検索文字列を入力">
+            <button type="submit" id="searchButtonJp" class="search-button">検索</button>
+            <button type="button" id="resetButtonJp" class="reset-button">リセット</button>
+        </form>
+        <form id="secondSearchFormJp" class="search-form">
+            <input type="text" id="secondSearchInputJp" class="search-input" placeholder="再検索文字列を入力" disabled>
+            <button type="submit" id="secondSearchButtonJp" class="search-button" disabled>再検索</button>
+        </form>
+        <div id="resultsJp" class="results-display">ファイルを読み込んでいます...</div>
+    </div>
+
+    <hr>
+
+    <div class="search-section">
+        <h2>CR(EN) search</h2>
+        <form id="searchFormEn" class="search-form">
+            <input type="text" id="searchInputEn" class="search-input" placeholder="検索文字列を入力">
+            <button type="submit" id="searchButtonEn" class="search-button">検索</button>
+            <button type="button" id="resetButtonEn" class="reset-button">リセット</button>
+        </form>
+        <form id="secondSearchFormEn" class="search-form">
+            <input type="text" id="secondSearchInputEn" class="search-input" placeholder="再検索文字列を入力" disabled>
+            <button type="submit" id="secondSearchButtonEn" class="search-button" disabled>再検索</button>
+        </form>
+        <div id="resultsEn" class="results-display">ファイルを読み込んでいます...</div>
+    </div>
+
+    <script>
+        // HTML特殊文字をエスケープする関数
+        function escapeHtml(unsafe) {
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // 正規表現特殊文字をエスケープする関数
+        function escapeRegExp(string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        /**
+         * 検索機能を初期化する関数
+         * @param {string} fileUrl - 読み込むテキストファイルのURL
+         * @param {string} searchFormId - 最初の検索フォームのID
+         * @param {string} searchInputId - 最初の検索入力フィールドのID
+         * @param {string} searchButtonId - 最初の検索ボタンのID
+         * @param {string} secondSearchFormId - 2番目の検索フォームのID
+         * @param {string} secondSearchInputId - 2番目の検索入力フィールドのID
+         * @param {string} secondSearchButtonId - 2番目の検索ボタンのID
+         * @param {string} resultsId - 結果表示エリアのID
+         * @param {string} resetButtonId - リセットボタンのID (追加)
+         */
+        function initializeSearch(fileUrl, searchFormId, searchInputId, searchButtonId,
+                                  secondSearchFormId, secondSearchInputId, secondSearchButtonId, resultsId,
+                                  resetButtonId) {
+
+            const searchForm = document.getElementById(searchFormId);
+            const searchInput = document.getElementById(searchInputId);
+            const searchButton = document.getElementById(searchButtonId);
+            const secondSearchForm = document.getElementById(secondSearchFormId);
+            const secondSearchInput = document.getElementById(secondSearchInputId);
+            const secondSearchButton = document.getElementById(secondSearchButtonId);
+            const results = document.getElementById(resultsId);
+            const resetButton = document.getElementById(resetButtonId); // リセットボタンの要素を取得
+
+            let fileContent = ''; // この検索機能専用のファイル内容
+            let firstSearchResults = []; // この検索機能専用の最初の検索結果
+
+            // ファイル読み込み
+            window.addEventListener('load', function() {
+                fetch(fileUrl)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.text();
+                    })
+                    .then(text => {
+                        fileContent = text;
+                        // ファイル名を表示するように変更
+                        results.innerHTML = `${fileUrl} が読み込まれました。検索できます。`;
+                    })
+                    .catch(error => {
+                        console.error(`Error loading ${fileUrl}:`, error);
+                        results.innerHTML = `ファイルの読み込み中にエラーが発生しました: ${error.message}`;
+                    });
+            });
+
+            // 結果を表示する関数
+            function displayResults(matchedLines, highlightTerm = '', highlightClass = '') {
+                if (matchedLines.length === 0) {
+                    results.innerHTML = '該当する行が見つかりませんでした。';
+                } else {
+                    const resultHtml = matchedLines.map(line => {
+                        let escapedLine = escapeHtml(line);
+                        if (highlightTerm && highlightClass) {
+                            const escapedTerm = escapeRegExp(escapeHtml(highlightTerm));
+                            // 大文字小文字を区別しない検索とハイライト
+                            escapedLine = escapedLine.replace(new RegExp(escapedTerm, 'gi'),
+                                match => `<span class="${highlightClass}">${match}</span>`);
+                        }
+                        return `<p>${escapedLine}</p>`;
+                    }).join('');
+                    results.innerHTML = resultHtml;
+                }
+            }
+
+            // 最初の検索フォームのイベントリスナー
+            searchForm.addEventListener('submit', function(e) {
+                e.preventDefault(); // フォームのデフォルト送信を防ぐ
+                const searchTerm = searchInput.value.trim();
+                if (searchTerm === '') {
+                    results.innerHTML = '検索文字列を入力してください。';
+                    return;
+                }
+
+                if (!fileContent) {
+                    results.innerHTML = 'ファイルがまだ読み込まれていません。しばらくお待ちください。';
+                    return;
+                }
+
+                const lines = fileContent.split('\n');
+                // 大文字小文字を区別しない検索
+                firstSearchResults = lines.filter(line => line.toLowerCase().includes(searchTerm.toLowerCase()));
+                // 最初の検索結果は赤色でハイライト
+                displayResults(firstSearchResults, searchTerm, 'highlight-first');
+
+                // 2番目の検索フォームを有効にする
+                secondSearchInput.disabled = false;
+                secondSearchButton.disabled = false;
+                secondSearchInput.value = ''; // 2番目の検索フィールドをクリア
+            });
+
+            // 2番目の検索フォームのイベントリスナー
+            secondSearchForm.addEventListener('submit', function(e) {
+                e.preventDefault(); // フォームのデフォルト送信を防ぐ
+                const searchTerm = secondSearchInput.value.trim();
+                if (searchTerm === '') {
+                    results.innerHTML = '再検索文字列を入力してください。';
+                    return;
+                }
+
+                if (firstSearchResults.length === 0) {
+                    results.innerHTML = '最初の検索結果がありません。まず最初の検索を実行してください。';
+                    return;
+                }
+
+                // 最初の検索結果の中からさらに検索 (大文字小文字を区別しない)
+                const matchedLines = firstSearchResults.filter(line => line.toLowerCase().includes(searchTerm.toLowerCase()));
+                // 2番目の検索結果は青色でハイライト
+                displayResults(matchedLines, searchTerm, 'highlight-second');
+            });
+
+            // リセットボタンのイベントリスナー
+            resetButton.addEventListener('click', function() {
+                searchInput.value = ''; // 最初の検索文字列をクリア
+                secondSearchInput.value = ''; // 2番目の検索文字列をクリア
+                secondSearchInput.disabled = true; // 2番目の検索フォームを無効化
+                secondSearchButton.disabled = true; // 2番目の検索ボタンを無効化
+                firstSearchResults = []; // 最初の検索結果をリセット
+                // ファイル読み込み時の初期メッセージに戻す
+                results.innerHTML = `${fileUrl} が読み込まれました。検索できます。`;
+            });
+        }
+
+        // 日本語検索機能の初期化
+        initializeSearch(
+            'JPN_CR_current.txt',
+            'searchFormJp', 'searchInputJp', 'searchButtonJp',
+            'secondSearchFormJp', 'secondSearchInputJp', 'secondSearchButtonJp', 'resultsJp',
+            'resetButtonJp' // リセットボタンのIDを追加
+        );
+
+        // 英語検索機能の初期化
+        initializeSearch(
+            'EN_CR_current.txt',
+            'searchFormEn', 'searchInputEn', 'searchButtonEn',
+            'secondSearchFormEn', 'secondSearchInputEn', 'secondSearchButtonEn', 'resultsEn',
+            'resetButtonEn' // リセットボタンのIDを追加
+        );
+    </script>
+    <hr>
+        <p>Changes:<br>
+        v0.4 リセットボタンを実装しました。読み出すファイル名を表示するようにしました。検索結果の表示のやり方を変更しました。(2025/06/06)<br>
+        v0.3 ENcrも検索できるようにしました。検索窓連動はしていません。互いに独立です。(2025/05/23)<br>
+        v0.2 二段階検索に対応しました。検索文字列でヒットした結果から更に再検索して色付けします。phpの使用をやめました。(2024/10/17)<br>
+        <a href="search_cr.html">v0.1</a> Initial version. (2024/5/24)</p>
+
+</body>
+</html>
