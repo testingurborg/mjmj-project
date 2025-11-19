@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>count up timer</title>
+    <style>
+        /* --- リセット & 変数定義 --- */
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        :root {
+            /* 通常時のサイズ */
+            --card-width: 120px;
+            --card-height: 160px;
+            --font-size: 100px;
+            --gap-timer: 20px;
+            --gap-layout: 40px;
+            
+            --title-size: 32px;
+            --title-margin: 20px;
+
+            /* カラー */
+            --bg-color: #1e1e1e;
+            --card-bg: #333;
+            --text-color: #e0e0e0;
+            --overtime-color: #ff453a; /* 超過時の赤色 */
+        }
+
+        /* --- 最大化モード --- */
+        body.fullscreen-active {
+            --card-width: 360px;
+            --card-height: 480px;
+            --font-size: 300px;
+            --gap-timer: 60px;
+            --gap-layout: 100px;
+            
+            --title-size: 100px;
+            --title-margin: 80px;
+
+            background-color: #000;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            transition: background-color 0.3s;
+        }
+
+        h1.app-name {
+            margin-bottom: 10px;
+            font-weight: 300;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-size: 14px;
+            opacity: 0.5;
+        }
+
+        /* 編集可能な題名 */
+        .session-title {
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            color: #fff;
+            font-size: var(--title-size);
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: var(--title-margin);
+            width: 90%;
+            max-width: 1200px;
+            outline: none;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .session-title:hover, .session-title:focus {
+            border-bottom: 2px solid #555;
+        }
+        
+        body.fullscreen-active .session-title:hover, 
+        body.fullscreen-active .session-title:focus {
+            border-bottom: none;
+        }
+
+        /* コントロールパネル */
+        .controls {
+            margin-bottom: 30px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            background: #2c2c2c;
+            padding: 15px 25px;
+            border-radius: 50px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        input[type="number"] {
+            background: #333;
+            border: none;
+            color: #fff;
+            padding: 10px;
+            border-radius: 5px;
+            width: 80px;
+            font-size: 18px;
+            text-align: center;
+        }
+        input[type="number"]::-webkit-inner-spin-button { opacity: 1; }
+
+        button {
+            background: #007aff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-weight: bold;
+        }
+        button:hover { background: #005bb5; }
+        button.reset { background: #ff3b30; }
+        button.reset:hover { background: #c12e25; }
+        button.maximize { background: #333; border: 1px solid #555; }
+        button.maximize:hover { background: #444; }
+        button:disabled { background: #555; cursor: not-allowed; opacity: 0.6; border: none; }
+
+        .label { font-size: 14px; margin-right: 5px; }
+
+        /* レイアウト用ラッパー */
+        .display-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+            transition: gap 0.3s;
+        }
+
+        body.fullscreen-active .display-group {
+            flex-direction: row;
+            align-items: center;
+            gap: var(--gap-layout);
+        }
+
+        /* タイマーコンテナ */
+        .countdown-container {
+            display: flex;
+            gap: var(--gap-timer);
+        }
+
+        .segment {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .segment-title {
+            font-size: 14px;
+            margin-top: 15px;
+            text-transform: uppercase;
+            opacity: 0.6;
+            letter-spacing: 1px;
+            transition: color 0.3s;
+        }
+
+        /* --- フリップカード --- */
+        .flip-card {
+            position: relative;
+            display: inline-block;
+            width: var(--card-width);
+            height: var(--card-height);
+            background-color: var(--card-bg);
+            border-radius: calc(var(--card-width) * 0.1);
+            perspective: 1000px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            transition: width 0.3s, height 0.3s;
+        }
+
+        .top, .bottom, .top-flip, .bottom-flip {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            height: 50%;
+            overflow: hidden;
+            background-color: var(--card-bg);
+            color: #eee; /* デフォルト色 */
+            font-size: var(--font-size);
+            font-weight: bold;
+            text-align: center;
+            transition: color 0.3s; /* 色変化のアニメーション */
+        }
+
+        /* ★超過時のスタイル（赤色にする）★ */
+        .flip-card.overtime .top,
+        .flip-card.overtime .bottom,
+        .flip-card.overtime .top-flip,
+        .flip-card.overtime .bottom-flip {
+            color: var(--overtime-color) !important;
+        }
+        
+        /* セグメントタイトルも赤くする */
+        .segment.overtime-text .segment-title {
+            color: var(--overtime-color);
+        }
+
+        .top, .top-flip {
+            top: 0;
+            border-radius: calc(var(--card-width) * 0.08) calc(var(--card-width) * 0.08) 0 0;
+            border-bottom: 1px solid rgba(0,0,0,0.6);
+            transform-origin: bottom;
+        }
+
+        .bottom, .bottom-flip {
+            bottom: 0;
+            border-radius: 0 0 calc(var(--card-width) * 0.08) calc(var(--card-width) * 0.08);
+            transform-origin: top;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.2); 
+        }
+
+        .card-digit {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            height: 200%;
+            line-height: var(--card-height);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .bottom .card-digit, .bottom-flip .card-digit { top: -100%; }
+        .top .card-digit, .top-flip .card-digit { top: 0; }
+
+        .top-flip { z-index: 2; transform: rotateX(0deg); }
+        .bottom-flip { z-index: 1; transform: rotateX(90deg); }
+
+        /* インフォメーションパネル */
+        .info-panel {
+            display: flex;
+            gap: 40px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px 30px;
+            border-radius: 10px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .time-box {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .time-label {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 5px;
+            letter-spacing: 1px;
+        }
+
+        .time-value {
+            font-size: 24px;
+            font-weight: 500;
+            font-family: 'Courier New', Courier, monospace;
+            color: #fff;
+        }
+
+        /* 最大化時の表示制御 */
+        body.fullscreen-active h1.app-name,
+        body.fullscreen-active .controls,
+        body.fullscreen-active .segment-title {
+            display: none !important;
+        }
+
+        body.fullscreen-active .session-title {
+            display: block;
+        }
+
+        body.fullscreen-active .info-panel {
+            flex-direction: column;
+            gap: 60px;
+            background: transparent;
+            padding: 0;
+            text-align: left;
+            min-width: 200px;
+        }
+
+        body.fullscreen-active .time-label { font-size: 24px; margin-bottom: 10px; }
+        body.fullscreen-active .time-value { font-size: 60px; line-height: 1; }
+
+        /* メディアクエリ */
+        @media (max-width: 1024px) {
+             body.fullscreen-active {
+                --card-width: 180px;
+                --card-height: 240px;
+                --font-size: 150px;
+                --gap-layout: 40px;
+                --title-size: 60px;
+            }
+            body.fullscreen-active .time-value { font-size: 30px; }
+            body.fullscreen-active .display-group { flex-direction: column; }
+        }
+
+        @media (max-width: 600px) {
+            :root {
+                --card-width: 80px;
+                --card-height: 110px;
+                --font-size: 70px;
+            }
+            .controls { flex-direction: column; width: 90%; padding: 20px; }
+            .info-panel { width: 90%; justify-content: space-around; }
+            .session-title { font-size: 24px; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <h1 class="app-name">Flip Timer App</h1>
+
+    <input type="text" class="session-title" value="input title" placeholder="タイトルを入力">
+
+    <div class="controls">
+        <span class="label">TIME (MIN):</span>
+        <input type="number" id="inputMinutes" min="1" step="1" value="50">
+        <button id="startBtn">START</button>
+        <button id="resetBtn" class="reset" disabled>RESET</button>
+        <button id="maximizeBtn" class="maximize">MAXIMIZE</button>
+    </div>
+
+    <div class="display-group">
+        
+        <div class="countdown-container">
+            <div class="segment" id="segMinutes">
+                <div class="flip-card" data-minutes>
+                    <div class="top"><div class="card-digit">50</div></div>
+                    <div class="bottom"><div class="card-digit">50</div></div>
+                </div>
+                <div class="segment-title">Minutes</div>
+            </div>
+
+            <div class="segment" id="segSeconds">
+                <div class="flip-card" data-seconds>
+                    <div class="top"><div class="card-digit">00</div></div>
+                    <div class="bottom"><div class="card-digit">00</div></div>
+                </div>
+                <div class="segment-title">Seconds</div>
+            </div>
+        </div>
+
+        <div class="info-panel">
+            <div class="time-box">
+                <span class="time-label">STARTED</span>
+                <span class="time-value" id="startTimeDisplay">--:--</span>
+            </div>
+            <div class="time-box">
+                <span class="time-label">ENDS AT</span>
+                <span class="time-value" id="endTimeDisplay">--:--</span>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let timerInterval = null;
+        let targetEndTime = null;
+        let isRunning = false;
+
+        const inputMinutes = document.getElementById('inputMinutes');
+        const startBtn = document.getElementById('startBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const maximizeBtn = document.getElementById('maximizeBtn');
+        
+        const cardMinutes = document.querySelector('[data-minutes]');
+        const cardSeconds = document.querySelector('[data-seconds]');
+        
+        const segMinutes = document.getElementById('segMinutes');
+        const segSeconds = document.getElementById('segSeconds');
+
+        const startTimeDisplay = document.getElementById('startTimeDisplay');
+        const endTimeDisplay = document.getElementById('endTimeDisplay');
+
+        function initDisplay(min) {
+            setCardValue(cardMinutes, String(min).padStart(2, '0'));
+            setCardValue(cardSeconds, "00");
+            clearOvertimeMode();
+        }
+
+        function formatTime(date) {
+            return date.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function clearOvertimeMode() {
+            cardMinutes.classList.remove('overtime');
+            cardSeconds.classList.remove('overtime');
+            segMinutes.classList.remove('overtime-text');
+            segSeconds.classList.remove('overtime-text');
+        }
+
+        function setOvertimeMode() {
+            cardMinutes.classList.add('overtime');
+            cardSeconds.classList.add('overtime');
+            segMinutes.classList.add('overtime-text');
+            segSeconds.classList.add('overtime-text');
+        }
+
+        // --- スタート処理 ---
+        startBtn.addEventListener('click', () => {
+            if (isRunning) return;
+
+            const minutes = parseInt(inputMinutes.value, 10);
+            if (isNaN(minutes) || minutes <= 0) {
+                alert("1分以上を設定してください");
+                return;
+            }
+
+            const nowObj = new Date();
+            targetEndTime = nowObj.getTime() + (minutes * 60 * 1000);
+            const endObj = new Date(targetEndTime);
+
+            startTimeDisplay.innerText = formatTime(nowObj);
+            endTimeDisplay.innerText = formatTime(endObj);
+
+            // スタート時はオーバータイムモードを解除
+            clearOvertimeMode();
+
+            isRunning = true;
+            startBtn.disabled = true;
+            inputMinutes.disabled = true;
+            resetBtn.disabled = false;
+
+            updateTimer();
+            timerInterval = setInterval(updateTimer, 1000);
+        });
+
+        // --- リセット処理 ---
+        resetBtn.addEventListener('click', () => {
+            clearInterval(timerInterval);
+            isRunning = false;
+            startBtn.disabled = false;
+            inputMinutes.disabled = false;
+            resetBtn.disabled = true;
+            
+            const minutes = parseInt(inputMinutes.value, 10) || 0;
+            initDisplay(minutes);
+
+            startTimeDisplay.innerText = "--:--";
+            endTimeDisplay.innerText = "--:--";
+        });
+
+        inputMinutes.addEventListener('change', () => {
+            if (!isRunning) {
+                const val = parseInt(inputMinutes.value, 10);
+                if (val > 0) initDisplay(val);
+            }
+        });
+
+        // --- 最大化機能 ---
+        maximizeBtn.addEventListener('click', () => {
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen();
+            } else if (elem.webkitRequestFullscreen) {
+                elem.webkitRequestFullscreen();
+            } else if (elem.msRequestFullscreen) {
+                elem.msRequestFullscreen();
+            }
+        });
+
+        document.addEventListener('fullscreenchange', toggleFullscreenClasses);
+        document.addEventListener('webkitfullscreenchange', toggleFullscreenClasses);
+        document.addEventListener('mozfullscreenchange', toggleFullscreenClasses);
+        document.addEventListener('MSFullscreenChange', toggleFullscreenClasses);
+
+        function toggleFullscreenClasses() {
+            if (document.fullscreenElement || document.webkitFullscreenElement || 
+                document.mozFullScreenElement || document.msFullscreenElement) {
+                document.body.classList.add('fullscreen-active');
+            } else {
+                document.body.classList.remove('fullscreen-active');
+            }
+        }
+
+        // --- タイマー更新ロジック（カウントアップ対応） ---
+        function updateTimer() {
+            const now = new Date().getTime();
+            const diff = targetEndTime - now;
+            
+            // 差分が負の値になったらオーバータイム（カウントアップ）
+            const isOvertime = diff < 0;
+            
+            if (isOvertime) {
+                setOvertimeMode();
+            } else {
+                // 念のため解除（通常はスタート時にリセットされるが、境界でのちらつき防止）
+                // clearOvertimeMode(); 
+            }
+
+            // 計算には絶対値を使用
+            // diffが正(残り時間): +900msして切り捨て（例: 0.9秒は "00"秒と表示させるか、"1"秒とさせるか。通常カウントダウンは切り上げ的に見せる）
+            // diffが負(超過時間): 単純に経過時間を表示
+            
+            let displayTime;
+            
+            if (!isOvertime) {
+                // カウントダウン中 (999ms -> 1s と表示したいので切り上げ気味に調整)
+                displayTime = diff + 900;
+            } else {
+                // カウントアップ中 (絶対値)
+                displayTime = Math.abs(diff);
+            }
+
+            const totalSeconds = Math.floor(displayTime / 1000);
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+
+            flipCard(cardMinutes, String(minutes).padStart(2, '0'));
+            flipCard(cardSeconds, String(seconds).padStart(2, '0'));
+        }
+
+        function setCardValue(cardElement, value) {
+            const topDigit = cardElement.querySelector('.top .card-digit');
+            const bottomDigit = cardElement.querySelector('.bottom .card-digit');
+            topDigit.innerText = value;
+            bottomDigit.innerText = value;
+            cardElement.querySelectorAll('.top-flip, .bottom-flip').forEach(el => el.remove());
+        }
+
+        function flipCard(cardElement, newValue) {
+            const topElement = cardElement.querySelector('.top');
+            const topDigit = topElement.querySelector('.card-digit');
+            const bottomElement = cardElement.querySelector('.bottom');
+            const bottomDigit = bottomElement.querySelector('.card-digit');
+            const currentValue = topDigit.innerText;
+
+            if (newValue === currentValue) return;
+
+            const topFlip = document.createElement('div');
+            topFlip.classList.add('top-flip');
+            topFlip.innerHTML = `<div class="card-digit">${currentValue}</div>`;
+
+            const bottomFlip = document.createElement('div');
+            bottomFlip.classList.add('bottom-flip');
+            bottomFlip.innerHTML = `<div class="card-digit">${newValue}</div>`;
+
+            topDigit.innerText = newValue; 
+            bottomDigit.innerText = currentValue;
+
+            cardElement.append(topFlip, bottomFlip);
+
+            topFlip.animate([
+                { transform: 'rotateX(0deg)' },
+                { transform: 'rotateX(-90deg)' }
+            ], {
+                duration: 250,
+                fill: 'forwards',
+                easing: 'ease-in'
+            }).onfinish = () => {
+                topFlip.remove();
+            };
+
+            bottomFlip.animate([
+                { transform: 'rotateX(90deg)' },
+                { transform: 'rotateX(0deg)' }
+            ], {
+                duration: 250,
+                fill: 'forwards',
+                easing: 'ease-out'
+            }).onfinish = () => {
+                bottomDigit.innerText = newValue;
+                bottomFlip.remove();
+            };
+        }
+        
+        initDisplay(50);
+
+    </script>
+</body>
+</html>
